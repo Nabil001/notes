@@ -1,0 +1,597 @@
+dossiers structurant une application Symfony :
+/app : tous les fichiers relatifs à la configuration de l'application
+/bin : contient les exécutables servant au développement
+/src : code source de l'application, organisé en bundles
+/tests : code de test
+/var : dossier où l'application écrit au cours de son fonctionnement (cache, logs...)
+/vendor : bibliothèques externes (Twig, Symfony...)
+
+bin/console est la console Symfony
+
+bundle : brique regroupant un ensemble de fonctionnalités similaires (bundle Utilisateur, bundle Blog...)
+souvent, un seul bundle représente la plupart des fonctionnalités d'une application, fonctionnalités qui ne sont pas amenés à être partagées séparemment
+
+Structure conventionnelle d'un bundle :
+/Controller          | Contient vos contrôleurs
+/DependencyInjection | Contient des informations sur votre bundle (chargement automatique de la configuration par exemple)
+/Entity              | Contient vos modèles
+/Form                | Contient vos éventuels formulaires
+/Resources
+-/config| Contient les fichiers de configuration de votre bundle (nous placerons les routes ici, par exemple)
+-/public| Contient les fichiers publics de votre bundle : fichiers CSS et JavaScript, images, etc.
+-/views| Contient les vues de notre bundle, les templates Twig
+
+créer un bundle : php bin/console generate:bundle (enregistre le bundle automatiquement dans l'application)
+L'application ajoute une toolbar dans le mode dev si la page est une page html
+
+fichier app/config/routing.yml : liste de l'ensemble des routes
+
+# app/config/routing.yml
+oc_platform:
+    resource: "@OCPlatformBundle/Resources/config/routing.yml"
+    prefix:   /
+
+app:
+    resource: '@AppBundle/Controller/'
+    type: annotation
+
+fichier src/Bundle/Ressources/config/routing.yml : définition de la route, précision du controller à utiliser
+
+# src/Bundle/Ressources/config/routing.yml
+oc_platform_homepage:
+    path:     /         # path défini le chemin de la route
+    defaults: { _controller: OCPlatformBundle:Default:index }   # defaults défini les paramètres de la route
+(l'indentation en YAML se fait avec 4 espaces, et non 1 tabulation)
+Le Router Symfony ne retourne pas de controleur associé à l'URL mais les paramètres de la route,
+de type : _controller = [Bundle]:[Controller]:[action]
+
+php bin/console cache:clear --env=dev/prod : vider le cache
+
+Le Controller a moyen d'accéder aux bundles de l'AppKernel l'ayant instancié
+paramètres système pour routage :
+_format : si la route sélectionnée un a paramètre _format, alors l'AppKernel ajoutera un header "Content-type: application/[_format]" à l'envoi de la page
+
+$url = $this->get('router')->generate('oc_platform_home');
+// OU
+$url = $this->generateUrl('oc_platform_home');
+
+si la route a des paramètres : $url = $this
+                                        ->get('router')
+                                        ->generate('oc_platform_home',
+                                                    ['id' => 2],
+                                                    UrlGeneratorInterface::ABSOLUTE_URL
+                                                    );
+Pour obtenir l'URL dans un template Twig : path('oc_platform_view', { 'id': advert_id })
+OU pour l'url absolue : url('oc_platform_view', { 'id': advert_id })
+
+L'objet Symfony\Component\HttpFoundation\Request permet d'avoir des renseignements sur la requête :
+$request->query->get('foo') : $_GET['foo']
+$request->request->get('foo') : $_POST['foo']
+$request->server->get('foo') : $_SERVER['foo']
+$request->cookies->get('foo') : $_COOKIE['foo']
+$request->headers->get('foo') : $_SERVER['HTTP_foo']
+$request->attributes->get('foo') : paramètre foo de la route (le kernel transmet la route et ses paramètres à la requête)
+
+Méthodes utiles de Request : isMethod('POST'), isXmlHttpRequest() (si requête AJAX)
+
+plusieurs moyens de retourner une réponse :
+//use Symfony\Component\HttpFoundation\Response
+return new Response('Hello World!');
+return new Response($this->get('templating')->render('Bundle:Controller:view', [param...]));
+return $this->get('templating')->renderResponse('Bundle:Controller:view', [param...]);
+return $this->render('Bundle:Controller:view', [param...]);
+
+plusieurs moyens de rediriger le client vers une autre URL :
+//use Symfony\Component\HttpFoundation\RedirectResponse
+{
+$url = $this->get('router')->generate('oc_platform_home');
+return new RedirectResponse($url);
+}
+
+{
+$url = $this->get('router')->generate('oc_platform_home');
+return $this->redirect($url);
+}
+
+{
+return $this->redirectToRoute('oc_platform_home');
+}
+
+Renseigner une en-tête Content-type à la Response (exemple avec contenu JSON) :
+{
+$response = new Response(json_encode(['id' => 5]));
+$response->headers->set('Content-type', 'application/json');
+return $response;
+}
+OU, dans ce cas précis JSON :
+//use Symfony\Component\HttpFoundation\JsonResponse
+{
+return new JsonResponse(['id' => 5]);
+}
+
+Les sessions :
+{
+$session = $request->getSession();
+$userId = $session->get('user_id');
+$session->set('user_id', 91);
+}
+
+principe du message flash : à la soumission concluante d'un formulaire, un message est ajouté à la session du client, et ainsi quand il est redirigé, on peut accéder à ce message pour avertir de la réussite de la soumission. à l'issue, le message est détruit
+{
+    $session = $request->getSession();
+    $session->getFlashBag->add('var', 'value');
+    $session->getFlashBag->add('var', 'value-bis');
+    return $this->redirectToRoute('advert_route', ['id' => 45]);
+}
+// template de la route advert_route :
+{% for message in app.session.flashbag.get('var') %} // ou app.flashes
+    Message : {{ message }}
+{% endfor %}
+
+Le prefix de app/config/routing.yml est considéré comme l'accès à un dossier : On ne peut pas avoir immédiatement après un paramètre optionnel.
+Cela signifierait, dans le cas où on ne renseigne pas ce paramètre, qu'on veut accéder à la racine du dossier, et non à un fichier de ce dossier. La route de Symfony, lorsque ce cas se présente, n'attribue donc aucune valeur à ce paramètre, même si une valeur par défaut lui est renseigné.
+
+installer composer avec php : php -r "eval('?>'.file_get_contents('http://getcomposer.org/installer'));"
+Pour ajouter un bundle à Symfony : ajouter dans composer.json, puis composer update, puis ajouter la bundle au tableau bundle de l'AppKernel
+
+Dans un contrôleur, $this->get('service') est équivalent à $this->container->get('service')
+
+Créer un service accessible depuis le conteneur de services :
+- Créer le bundle du service, par convention on ajoute le service dans un dossier situé immédiatement après le nom du Bundle : OC\PlatformBundle\Antispam\OCAntispam où OCAntispam est le service
+- Ajouter le bundle aux bundles chargés par le kernel (tableau bundles[])
+- Ajouter dans le dossier DependencyInjection du bundle le fichier de type [Vendor][Bundle]Extension.php, soit OCPlatformExtension.php : la méthode load() est automatiquement appelé par le kernel afin de charger les éventuels services du bundle
+// src/OC/PlatformBundle/DependencyInjection/OCPlatformExtension.php (créé automatiquement si bundle crée avec la console Symfony)
+public function load(array $configs, ContainerBuilder $container)
+{
+    $configuration = new Configuration();
+    $config = $this->processConfiguration($configuration, $configs);
+
+    $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
+    $loader->load('services.yml');
+}
+- Ajouter le service dans le fichier (src/vendor/bundle/)Resouces/config/services.yml
+// src/OC/PlatformBundle/Resouces/config/services.yml
+services:
+    oc_platform.antispam:   #nom du service ($container->get('oc_platform.antispam'))
+        class: OC\PlatformBundle\Antispam\OCAntispam #classe représentant le service ($container instanciera la classe OCAntispam)
+        arguments:
+            - "%param%" # paramètre dans services.yml ou app/config/parameters.yml
+            - "@mailer" # service mailer
+            - 50        # valeur brute
+
+Créer un paramètre accessible depuis le container ($container->getParameter('param')) :
+- dans service.yml d'un bundle ou parameters.yml dans app/config :
+parameters:
+    nom_param: valeur
+
+Entités et ORM :
+bin/console doctrine:database:create (--connection=une_connexion si plusieurs connexions à choisir depuis app/config/config.yml, paramètre connection de doctrine) -> créer une base de données en utilisant la console Symfony et Doctrine
+bin/console doctrine:generate:entity  -> assistance à la création d'une entité Doctrine (namespace Vendor/Bundle/Entity)
+
+Pour mapper une entité grâce aux annotations (/** ***** */)
+@ORM\Entity à placer avant la classe
+@ORM\Entity(repositoryClass="OC\PlatformBundle\Entity\AdvertRepository") : namespace du repository de l'entité
+@ORM\Entity(readOnly=true) : true si modifications interdites
+@ORM\Table à placer après Entity
+@ORM\Table(name="oc_advert") : indiquer le nom de la table associée à l'objet mappé
+@ORM\Column à placer avant un attribue pour l'associer à une colonne
+plusieurs paramètres :
+- (type="string") pour renseigner le type (types Doctrine : string, integer, smallint, bigint, date,
+                                            datetime, time, boolean, decimal, text, object, array, float)
+- (name="is_expired") : nom du champ dans la table
+- (length=255) applicable sur string
+- unique=false
+- nullable=false
+- precision=2 applicable sur decimal
+- scale=2 applicable sur decimal
+
+bin/console doctrine:schema:update --dump-sql : code SQL à exécuter pour corriger l'état de la BDD actuel
+bin/console doctrine:schema:update --force (--em=entitymanager pour agir sur la base avec un entitymanager particulier (default si rien de renseigné)): exécution du code SQL en fonction des entités créées
+bin/console doctrine:generate:entities Bundle:EntityClass : Doctrine génère les entités à partir de ce qu'il connaît : si une annotation n'a pas ses setters/getters, il les ajoute (utile lors d'une modification de champs)
+
+Gérer ses entités :
+$doctrine = $this->container->get('doctrine') | $this->getDoctrine() si dans Controller pour obtenir le service Doctrine
+$doctrine->getConnexion($name) pour obtenir la connexion dont le nom est précisé en argument
+$doctrine->getManager($name = 'default') obtenir un EntityManager
+Soit depuis un contrôleur : $this->getDoctrine()->getManager() voire $this->get('doctrine.orm.entity_manager')
+$em->persist($advert) : confier à l'EntityManager la responsabilité de l'objet $advert
+$em->flush() : ouvrir une transaction, persistance des éléments dont Doctrine a la responsabilité
+$em->detach() : détacher une entité de l'EntityManager
+$em->clear(['OCPlatformBundle:Advert' | 'OC\PlatformBundle\Entity\Advert']) : détacher toutes les entités rattachées à l'EntityManager
+$em->contains($advert) : indique si l'entité est rattaché à EntityManager
+$em->remove($advert) : supprime en base de données
+$em->refresh($advert) : objet mis à jour selon son état en base de données
+
+Les relations entre entités :
+1 à 1 :
+/**
+  * @ORM\OneToOne(targetEntity="OC\PlatformBundle\Entity\Image", cascade={"persist"})
+  * @ORM\JoinColumn(nullable=false) //Pour une relation obligatoire (image_id non null dans advert)
+  */
+private $cleEtrangereVersImage
+argument CASCADE={"persist"} : si on persiste un advert contenant une image, l'image est aussi persistée
+on peut appliquer la cascade aux autres opérations telles que remove
+
+1 à plusieurs :
+/**
+ * @ORM\ManyToOne(targetEntity="Advert")
+ * @ORM\JoinColumn(nullable=false)
+ */
+utilisation similaire à une relations 1 à 1
+
+plusieurs à plusieurs:
+/**
+ * @ORM\ManyToMany(targetEntity="Category", cascade={"persist"})
+ * @ORM\JoinTable(name="oc_advert_category") // PERSONNALISER LE NOM DE LA TABLE D'ASSOCIATION
+ */
+private categories;
+
+categories est ici un objet-tableau de type ArrayCollection, rassemblant les catégories de l'annonce
+les methodes associées sont addCategory() et removeCategory()
+
+Persister des éléments en base de données :
+- créer src/[Vendor]/[Bundle]/DataFixtures/ORM/Fixtures.php
+//////////// Fixtures.php
+namespace AppBundle\DataFixtures\ORM;
+use OC\PlatformBundle\Entity\Category;
+use Doctrine\Bundle\FixturesBundle\Fixture;
+use Doctrine\Common\Persistence\ObjectManager;
+class Fixtures extends Fixture
+{
+    public function load(ObjectManager $manager)
+    {
+    }
+}
+///////////////////
+- php bin/console doctrine:fixtures:load (--append si pas de purge souhaitée)
+
+$listApplications = $em
+      ->getRepository('OCPlatformBundle:Application')
+      ->findBy(array('advert' => $advert));
+// sélection des lignes comportant le(s) champs indiqué(s)
+
+Lorsqu'on extrait de la BDD une entité (advert), comprenant elle-même une autre entité (image), avec find(), l'attribut de l'entité (advert->image) ne contient pas l'image, ça n'est que lorsqu'on accède à un attribut advert->image->attribut que l'image est récupéré par le manager
+
+Créer une relation multiple avec attribut (commande/produit pour intégrer une quantité par exemple) :
+Une solution est de créer une entité d'association (CommandeProduit), faire des colonnes ManyToOne pour relier les entités voulues
+
+Relations bidirectionnelles :
+en 1 à plusieurs, ManyToOne est le propriétaire, et pour rendre la relation bidirectionnelle, il faut préciser l'annotation suivante l'entité inverse :
+// classe Advert
+/**
+ * @ORM\OneToMany(targetEntity="Application", mappedBy="advert")
+ */
+private $applications;
+
+// classe Application
+/**
+ * @ORM\ManyToOne(targetEntity="Advert", inversedBy="applications")
+ */
+private $advert;
+
+Les repositories :
+- find([clé primaire])
+- findAll()
+- findBy(array('colonne' => 'valeur'), #critère d'égalité
+        array('date' => 'desc'),            #tri
+        limite,
+        offset)
+- findOneBy((array('colonne' => 'valeur')
+        array('date' => 'desc'))
+- avec la méthode magique __call() : findBy{One}[Colonne]([valeur]);
+$repository->findByAuthor('Nabil'); $repository->findOneByAuthor('Nabil');
+
+Créer un QueryBuilder pour éditer des requêtes :
+$em->createQueryBuilder();
+depuis un repository : $this->_em->createQueryBuilder(), ou $this->createQueryBuilder([alias]) pour disposer déjà de SELECT * FROM entity (alias: 1ère lettre de la table)
+
+méthodes queryBuilder : where(), andWhere(), join(), innerJoin(), leftJoin()... (voir doc)
+setParameter('id', 2), setParameters(['id' => 2, 'user' => 'Nabil']);
+$query = $queryBuilder->getQuery();
+$query->getResults(); // Tableau d'objets, attachées à EntityManager
+$query->getArrayResults() // Tableau de tableau représentant les champs (les Collections ne sont pas présentes, seulement les champs tels qu'ils sont dans le base le sont)
+$query->getOneOrNullResult() //Exception si plus d'un résultat
+$query->getSingleResult() //Exception si plus d'un résultat ou pas de résultat
+$query->execute() // exécuter la requête (les getResult() sont un raccourcis de $results = $query->execute(array(), Query::HYDRATE_ARRAY);)
+
+Doctrine fournit une commande pour tester ses requêtes DQL à la volée (Symfony instancie EntityManager, qui crée alors un objet query et l'exécute)
+php bin/console doctrine:query:dql "SELECT a FROM OCPlatformBundle:Advert a"
+
+FAIRE UN JOIN DANS UNE REQUETE PERMET DE CHARGER DIRECTEMENT LES OBJETS-ATTRIBUTS
+
+Evénements Doctrine :
+- pour profiter des callbacks, indiquer HasLifecycleCallbacks() avant la définition de la classe : @ORM\Entity(repositoryClass="OC\PlatformBundle\Repository\AdvertRepository")
+@ORM\HasLifecycleCallbacks()
+- indiquer l'événement avant la déclaration de la méthode callback
+/**
+ * @ORM\PreUpdate
+ */
+public function updateSomething(){}
+
+Doctrine Listener : exemple d'un envoi de mail pour chaque Application persistée
+- création du service d'envoi de mail à partir d'une Application
+- création d'un service Doctrine Listener lancé à l'événement postPersist
+
+Bundle Stof\DoctrineExtensions :
+- utilisation de sluggable -> installer le bundle avec composer, intégrer aux bundles du kernel, renseigner la configuration du listener
+// app/config/config.yml
+stof_doctrine_extensions:
+    orm:
+        default:
+            sluggable: true
+//Entity
+use Gedmo\Mapping\Annotation as Gedmo;
+/**
+ * @Gedmo\Slug(fields={"title", "id"}, unique=true)
+ * @ORM\Column(name="slug", type="string", length=255)
+ */
+private $slug;
+
+Système de pagination :
+Doctrine\ORM\Tools\Pagination\Paginator(Query $query, boolean)
+l'objet Paginator prend en paramètre une Query, récupère ses résultats, et ne sélectionne que les éléments compris entre les nombres indiqués par l'offset $query->setFirstResult([nb]) et le limite $query->setMaxResults([nb]).
+count($paginator) indique le nombre total d'éléments en BDD (utile pour savoir le nombre de pages), et s'utilise comme un tableau (contenant juste les éléments de l'intervalle)
+
+Formulaire :
+$formBuilder = $this->get('form.factory')->createBuilder(FormType::class, $advert) // créer un formulaire destiné à hydrater l'objet $advert
+
+$formBuilder->add('nom du champs', [type du champs]::class, [options du champs]) // ajoute un élément au formulaire (valeur par défaut : la propriété de l'objet telle qu'elle)
+[options du champs] : array('data' => [placeholder], 'required' => false) //champs du formulaire requis par défaut
+$form = $formBuilder->getForm();
+$form->createView() : exploitable par form() dans Twig
+
+$form->handleRequest($request) hydrate l'objet auquel le form est lié en piochant dans POST
+
+Modifier l'affichage du formulaire depuis Twig :
+# app/config/config.yml
+twig:
+    form_themes:
+        - 'bootstrap_3_layout.html.twig'
+
+Afin d'avoir notre formulaire (destiné à hydrater) réutilisable, on créer une class du type [EntityType] qui permettra au service 'form.factory' de générer le formulaire correspondant à l'entité choisie
+php bin/console doctrine:generate:form OCPlatformBundle:Advert // Créer OC\PlatformBundle\Form\AdvertType
+après création de l'EntityType, on créer le formulaire de la façon suivante :
+$this->get('form.factory')->create(AdvertType::class, $advert)
+OU $this->createForm(AdvertType::class, $advert)
+On peut - imbriquer des formulaires : $builder->add('image', ImageType::class)
+- lister les éléments d'une relation (ArrayCollection) d'un objet, en permettant de supprimer ou d'ajouter dans cette collection :
+            ->add('categories', CollectionType::class, array(
+                'entry_type' => CategoryType::class,
+                'allow_add' => true,
+                'allow_delete' => true
+            )
+- proposer des choix parmi les entités existantes en base de données :
+->add('categories', EntityType::class, array(
+    'class' => 'OCPlatformBundle:Category',
+    'choice_label' => 'name',
+    'multiple' => true,
+    'expanded' => true,
+    'query_builder' => function(CategoryRepository $repository) use($pattern){
+        return $repository->getPatternQueryBuilder($pattern);
+        }
+)
+
+Héritage : un *Type peut hériter d'une autre :
+class AdvertEditType extends AbstractType
+{
+  public function buildForm(FormBuilderInterface $builder, array $options)
+  {
+    $builder->remove('date'); // on supprime le champs, incohérent dans ce formulaire de modification
+  }
+
+  public function getParent()
+  {
+    return AdvertType::class; // formulaire d'ajout
+  }
+}
+// par cette façon d'hériter, l'objet Form exécute buildForm() parent avant d'éxécuter celui du fils
+
+On peut créer un formulaire vide : $form = $this->get('form.factory')->create();
+-> utile pour générer le token afin de pallier à la faille CSRF
+
+On peut changer l'état du formulaire selon l'état de l'objet rattaché en "ajoutant un évenement" : avant la création du formulaire par le formBuilder, et donc la 1ère hydratation de l'objet, l'événement PRE_SET_DATA est appelé :
+ $builder->addEventListener(
+      FormEvents::PRE_SET_DATA,    // 1er argument : L'évènement qui nous intéresse : ici, PRE_SET_DATA
+      function(FormEvent $event) { // 2e argument : La fonction à exécuter lorsque l'évènement est déclenché
+        // On récupère notre objet Advert sous-jacent
+        $advert = $event->getData();
+})
+
+Ajouter un fichier dans un formulaire : use Symfony\Component\HttpFoundation\File\UploadedFile;
+Ajouter un champs file dans Image, correspondant à FileType::class dans le formulaire
+à la soumission, le formulaire construit un UploadedFile assigné à $file de l'Image (pas persisté par Doctrine)
+utiliser les événements Doctrine pour gérer le chargement du fichier...
+
+Callback pour vérifier de façon personnalisé un objet : exemple d'un contenu ne devant pas contenir certain mots :
+$this->get('validator') pour accéder au service de Validation d'un objet (appelé automatiquement par $form->isValid())
+/**
+   * @Assert\Callback
+   */
+  public function isContentValid(ExecutionContextInterface $context)
+  {
+    $forbiddenWords = array('démotivation', 'abandon');
+
+    // On vérifie que le contenu ne contient pas l'un des mots
+    if (preg_match('#'.implode('|', $forbiddenWords).'#', $this->getContent())) {
+      // La règle est violée, on définit l'erreur
+      $context
+        ->buildViolation('Contenu invalide car il contient un mot interdit.') // message
+        ->atPath('content')                                                   // attribut de l'objet qui est violé
+        ->addViolation() // ceci déclenche l'erreur, ne l'oubliez pas
+      ;
+    }
+
+Créer un service de validation (utile si besoin d'accéder à un élément du conteneur tel que EntityManager, ou Request) :
+Créer le service :
+oc_platform_validator.antiflood:
+    class: OC\PlatformBundle\Validator\AntifloodValidator
+    arguments: ["@request_stack", "@doctrine.orm.entity_manager"]
+    tags:
+        - { name: validator.constraint_validator, alias: oc_platform_antiflood }
+- insérer dans la contrainte la méthode validatedBy() retournant l'alias du service : Le Validator lancera ainsi ce service lors de la validation de la contrainte
+
+Sécurité sous Symfony, avec le bundle SecurityBundle :
+2 principes : l'authentification, géré par le firewall
+                l'autorisation, géré par un access control
+SecurityBundle se configure dans le fichier app/config/security.yml
+- section encoders : indiquer la méthode d'encodage (plaintext, sha512...)
+- section role_hierarchy : indiquer la hierarchie des roles (si un utilisateur a le role ADMIN, il peut accéder aux pages recquierant le role USER, car le role ADMIN "hérite" du rôle USER)
+- section providers : définition des utilisateurs avec leur roles, ou définition de la méthode d'authentification (par une BDD par exemple)
+- section firewall : configuration du firewall
+- section access_control : configuration de l'access control
+
+Récupérer une instance de User représentant l'utilisateur actuel sur la session :
+$security = $container->get('security.token_storage')
+$token = $security->getToken() // null si requête pas derrière un pare-feu
+$user = $token->getUser()      // instance User, ou "anon." si anonyme
+$userName = $user->getUsername()
+RACCOURCI CONTROLLER : $this->getUser() // null si anonyme ou pas derrière pare-feu, User sinon
+Accès variables utilisateur depuis Twig : app.user // cf. ligne précédente
+
+Le service authorization_checker permet de vérifier qu'un utilisateur dispose d'un role particulier :
+isAllowed = $this->get('security.authorization_checker')->isGranted('ROLE_USER')
+use Symfony\Component\Security\Core\Exception\AccessDeniedException; // à lancer si pas permis d'accéder à la page à cause d'un manque de rôle
+
+Plusieurs méthodes permettent de vérifier la présence d'un rôle, en utilisant ce même service :
+- annotations : use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
+/**
+ * Security("has_role('ROLE_USER')")
+ */
+indexAction(){}
+---------------> sécurisation d'une méthode
+- Twig : {% if is_granted('ROLE_USER') %} ----> sécurisation de l'affichage
+- fichier de configuration :
+security:
+    access_control:
+        - { path: ^/admin, roles: ROLE_ADMIN }
+-----> sécurisation d'une URL
+la configuration access_control permet aussi de sécuriser l'URL grâce à d'autres options :
+access_control:
+    - { path: ^/admin, ip: 127.0.0.1, requires_channel: https }
+
+Utiliser les utilisateurs en base de données : en symfony 1 utilisateur = 1 objet implémentant UserInterface
+
+3 types de fournisseurs d'utilisateurs : memory (utilisateur inscrit dans security.yml), entity (en BDD), id (en utilisant un service)
+
+--------------------------------------
+Les services : un tag est une information apposé à un ou plusieurs services afin que le conteneur les identifies par celle-ci
+
+Exemple d'utilisation des tags avec Twig : Twig à son initialisation appelle tous les services ayant le tag twig.extension.
+Ce service doit hériter de Twig_Extension avec les méthodes getFunctions() et getName() pour pouvoir être utilisé dans les vues Twig
+
+Liste de services courant sur Symfony :
+doctrine.orm.entity_manager accès à EM
+event_dispatcher accès au gestionnaire evenements
+kernel accès au noyau
+logger logs de l'application
+mailer Swiftmailer
+request_stack accès à la requête si elle existe (getCurrentRequest)
+router routeur, pour générer des routes
+security.token_storage accès aux paramètres utilisateur courant getToken()->getUser()
+service_container accès au conteneur lui-meme
+twig accès à Twig_Environment
+templating permet le rendu de vues avec le moteur de template (Twig par défaut)
+
+définir un service dont une méthode est à exécuter lors d'un événement précis :
+- { name: kernel.event_listener, event: kernel.response,   method: processBeta }
+(après que le conteneur ait initialisé le gestionnaire d'évenement, ce dernier appelle les services ayant le tag kernel.event_listener, et ils sont ajouté à la liste des listeners)
+
+Lors de l'appelle d'une méthode de listener par le gestionnaire d'évenement, plusieurs arguments peuvent être passés à cette méthode : un objet Event (FilterResponseEvent pour un évenement kernel.response) donnant des informations sur l'évenements, le nom de l'évenement, ainsi que le gestionnaire (EventDispatcher) lui-même (dans le cas où le listener voudrait écouter un autre évenement)
+
+Evenements usuels sur Symfony, avec l'argument Event envoyé au listener par le gestionnaire d'évenements :
+- kernel.request (GetResponseEvent), déclenché avant le choix du controlleur
+- kernel.controller (FilterControllerEvent), déclenché juste avant l'éxécution du controller
+- kernel.view (GetResponseForControllerResultEvent) : déclenché lorsqu'un Controller n'a pas retourné de Response
+- kernel.response (FilterResponseEvent) : déclenché au renvoi de la Response par le Controller
+- kernel.exception (GetResponseForExceptionEvent) : déclenché lorsqu'une Exception est levée
+
+- security.interactive_login (InteractiveLoginEvent) : déclenché à lors de l'identification d'un client (via formulaire, cookies...)
+- security.authentification.success (AuthenticationEvent) : déclenché au succès de l'identification
+- security.authentification.failure (AuthenticationFailureEvent) : déclenché à l'échec de l'identification
+
+Créer son propre évenement :
+(- Créer une classe regroupant les noms d'éévenements dans des constantes)
+namespace OC\PlatformBundle\Event;
+final class PlatformEvents {const POST_MESSAGE = 'oc_platform.post_message';}
+- Créer le service jouant le rôle de l'évenement, héritant de la classe Event
+class MessagePostEvent extends Event
+  protected $message;
+  protected $user;
+  public function __construct($message, UserInterface $user)
+  {
+    $this->message = $message;
+    $this->user    = $user;
+  }
+- déclencher l'évemenement :
+$event = new MessagePostEvent($advert->getContent(), $advert->getUser());
+$this->get('event_dispatcher')->dispatch(PlatformEvents::POST_MESSAGE, $event); // le gestionnaire transmettera l'évement MessagePostEvent aux listeners
+- Créer le listener de l'évenement et les services qu'il utilisera
+
+Les Event Subsribers :
+- On peut déclarer des évenements indiquant de façon dynamique au gestionnaire quels evenements il veut écouter, pour cela le Subscriber doit implémenter EventSubscriberInterface, avec la méthode getSubscribedEvents() retournant un tableau nom_evenement => method_a_appeler (ou [method_a_appeler => priorité]), ainsi que les methodes qui seront appelées (methode_a_appeler) par le gestionnaire d'evenement
+- un Event Subscriber doit être déclaré en tant que service, avec le tag kernel.event_subscriber
+
+Priorité des listener : on peut ajouter une priorité sur les listeners, pour définir un ordre précis de leur éxécution. $event->stopPropagation() (dans une méthode de listener) fait en sorte que l'évenement $event n'est plus propagé : les autres listener censés agir sur l'évenement ne seront pas éxécuté par le gestionnaire d'évenement
+
+La conversion de paramètres avec les ParamConverter : convertir un paramètre de route en entité Doctrine
+Il s'agit d'un listener appelé à l'évenement kernel.controller, modifiant le paramètre passé au controller
+
+DoctrineParamConverter est automatiquement appelé avant l'exécution d'une action : si rien n'est indiqué, l'action attend une entité et un attribut de l'entité est en paramètre de route, le ParamConverter va chercher l'entité indiqué en signature d'action avec cet attribut, si pas trouvée, ERROR 404 levée
+route : route/{id} et action(Entite $e)) : le Converter cherchera $e avec l'attribut id de l'entité
+        route/{slug} et action(Entite $e)) : le Converter cherchera $e avec l'attribut slug de l'entité
+
+On peut fournir plus d'options au ParamConverter :
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+// /platform/advert/{advert_id}/{skill_id}
+/**
+ * @ParamConverter("advertSkill", options={"mapping": {"advert_id": "advert", "skill_id": "skill"}})
+ */
+public function viewAction(AdvertSkill $advertSkill){}
+
+Changer le paramètre "date" de la route en DateTime grâce au ParamConverter :
+/**
+ * @ParamConverter("date", options={"format": "Y-m-d"})
+ */
+public function viewListAction(\Datetime $date)
+
+FONCTIONNEMENT : ParamConverterListener est un service qui s'éxécute à l'évenement kernel.controller
+- Il récupère tous les ParamConverter (service ayant le tag request.param_converter)
+- il demande à chaque ParamConverter si il supporte la configuration (annotations), et si oui, le ParamConverter l'applique à la Request, transmise au Controller
+
+Créer son ParamConverter : classe implémentant ParamConverterInterface :
+- function supports(ParamConverter $configuration)
+- function apply(Request $request, ParamConverter $configuration)
+
+passer un paramètre à un controller de subrequest :
+{{ render(controller('AppBundle:Dinosaur:_latestTweets', {
+    'userOnMac': app.request.attributes.get('isMac')
+})) }}
+Controller {
+    public function xxxAction($userOnMac){}
+}
+
+Lister les services accessible en "type-hint" :
+php bin/console debug:container --types
+
+Contrôle des arguments services du Controller :
+AppBundle\Controller\LuckyController:
+        public: true
+        tags:
+            # add multiple tags to control multiple args
+            - name: controller.service_arguments
+              action: numberAction
+              argument: logger
+              # pass this specific service id
+              id: monolog.logger.doctrine
+
+Services de sécurité utiles :
+security.token_storage : savoir quel utilisateur est connecté
+security.authorization_checker : savoir si l'utilisateur a un droit particulier
+
+heirarchie des rôles :
+
+security:
+    role_hierarchy:
+        ROLE_ADMIN: [ROLE_MANAGE_GENUS, ROLE_ALLOWED_TO_SWITCH]
+ROLE_ALLOWED_TO_SWITCH permet d'impersonifier un utilisateur, se connecter en tant que cette personne, en ajoutant à l'URL : ?_switch_user=[champs property indiqué dans le provideur]
+?_switch_user=_exit pour quitter le mode "user switch"

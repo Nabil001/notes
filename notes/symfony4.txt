@@ -1,0 +1,100 @@
+installer : https://symfony.com/doc/current/setup.html
+utiliser Flex pour :
+installer la vérification de présence de faille : composer require sec-checker
+installer le server de développement : composer require server
+configurer : https://symfony.com/doc/current/configuration.html#config-dot-env
+vérifier la présence de faille : https://symfony.com/doc/current/reference/requirements.html
+configurer le serveur web (Apache) : https://symfony.com/doc/current/setup/web_server_configuration.html
+
+vérifier ce qui est requis :
+- composer require requirements-checker
+- ouvrir public/check.php depuis le navigateur
+- supprimer : composer remove requirements-checker
+
+lister toute la configuration d'un bundle : php bin/console config:dump-reference
+obtenir les détails de la configuration d'un bundle : php bin/console config:dump-reference framework
+
+.env définie des variables destinées à changer d'un serveur à l'autre, (i.e. contenant des données sensibles)
+
+lister les services : php bin/console debug:container (--show-private)
+lister les services disponible en type-hinting : php bin/console debug:autowiring
+
+services:
+    _defaults:
+        bind:
+            # pass this value to any $adminEmail argument for any service
+            # that's defined in this file (including controller arguments)
+            $adminEmail: 'manager@example.com'
+
+            # pass this service for any LoggerInterface type-hint for any
+            # service that's defined in this file
+            Psr\Log\LoggerInterface: '@monolog.logger.request'
+
+Bonnes pratiques :
+- configuration :
+    - .env contient ce qui varie d'une machine à l'autre (modèle défini dans .env.dist), services.yaml contient ce qui modifie la comportement de l'application
+    - Les variables étant peu susceptibles d'être modifiée devraient être défini en tant que constantes plutôt que paramètres
+    - les paramètres d'application devraient commencer par 'app.'
+- logique métier :
+    - toute la logique devrait être défini dans src/
+    - l'id d'un service devrait être le nom de sa classe, excepté dans le cas où on a plusieurs service dans une même classe, ou si un service est publique
+    - les services devraient être privés, dans la mesure possible
+    - il est recommandé d'utiliser YAML
+- controleur :
+    - Le contrôleur devrait hériter de la classe AbstractController, utiliser les annotations pour configurer routes, sécurité et cache autant que possible
+    - indiquer que les routes sont en annotations :
+    // config/routes.yaml
+    controllers:
+        resource: '../src/Controller/'
+        type:     annotation
+    - Pas de suffixe 'Action'
+    - Les services utiliser dans un contrôleur ne doivent pas être obtenu par $container->get(), mais plutôt par le type-hinting
+- templating :
+    - regrouper les templates dans le dossier templates/ à la racine
+    - utiliser la convention snake_case
+    - utiliser le préfixe '_' pour les templates partiels
+    - regrouper les extensions Twig dans src/Twig/
+- formulaires:
+    - à définir dans une classe, pas dans un contrôleur
+    - les placer sous le namespace App/Form
+    - placer les boutons dans les templates, pas dans les classes de formulaires
+- sécurité :
+    - avoir 1 seul firewall avec anonyme authentifié (anonymous: true), sauf si besoin autre (firewall standard + firewall API)
+    - utiliser bcrypt pour l'encodage
+    - pour protéger des motifs complexes d'URL : access_control
+    - utiliser @Security autant que possible
+    - définir un voteur pour des besoins d'authentification plus complexes
+- Assets :
+    - utiliser Webpack Encore pour compiler, combiner et minimiser les assets
+- Tests :
+    - Tester unitairement la logique métier
+    - Tester fonctionnelement pour au moins vérifier le statut de la réponse et si la page se charge correctement
+    - écrire les URLs testées en dur, dans le code
+
+composer unpack [un pack] : "deballer" un pack, afin de pouvoir gérer les bundles ajoutés à l'installation du pack
+
+configuration PhpStorm :
+    - thème dracula
+    - régler font
+    - régler correction automatique
+    - régler surlignage
+    - plugins non nécessaires (git, ssh, remote hosts par exemple)
+    - enlever browsers
+    - src en tant que dossier source, ajouter prefix 'App' (code->detect PSR-0)
+    - installer plugins Symfony, PHP annotations et PHP Toolbox
+    - configurer les templates (constructeur, getter...) en cherchant 'templates'
+    - configurer les lives templates si besoin
+    - régler l'indentation de la tabulation pour les fichiers YAML (chercher ('tab'))
+
+raccourcis :
+    - générer : alt+inser
+    - ctrl+alt+s : paramètres
+    - ctrl+[espace] : affiche les possibilités lors d'un renseignement de paramètre
+    - ctrl+[clique] : accéder à la source de la propriété/classe
+    - ctrl+n : rechercher une classe
+    - ctrl+e : rechercher dans les fichiers récents
+    - ctrl+alt+maj : rechercher un nom de fichier
+    - ctrl+alt+L : reformater le code
+    - pubf + tab : créer public function ()
+
+composer require symfony/apache-pack : ajouter .htaccess dans public/

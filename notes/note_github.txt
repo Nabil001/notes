@@ -1,0 +1,53 @@
+Commit : série de modifications apportées au code
+            correspond donc à une version de votre code à un instant t
+
+Modèle centralisé : un serveur central contrôle toute la base de code du logiciel.
+Exemples de logiciels de versioning utilisant un modèle centralisé : SVN, CVS.
+Modèle distribué : toutes les machines ont accès à la base de code, pas besoin de passer par un serveur central.
+Git est basé sur un modèle de partage distribué
+
+Avantages :     -   Moins de risques de perdre son code puisqu'il est accessible par plusieurs sources.
+                -   On peut travailler plus rapidement et sans être connecté à Internet puisqu'il n'y a   pas besoin de se connecter à un serveur central.
+
+git init : déclarer le répertoire comme repository (répertoire de travail géré par Git)
+git status : observer le statut du repository
+git add file.txt : ajouter le fichier file.txt parmi les fichiers surveillés par Git (untracked)
+git commit -m "Message" : déclarer un commit sur les fichiers ajoutés
+git log : afficher tous les commits dans l'ordre chronologique
+
+git checkout shaDuCommit : se rendre à un commit donné
+
+git checkout master : retour sur la branche principale
+
+git commit -a -m : -a permet d'éviter d'ajouter le(s) fichier(s) qui ont déjà été commités à l'index
+
+git reset --hard‌ : annuler tous les changements fait depuis le dernier commit
+
+git commit --amend -m "Votre nouveau message" : modifier le message du dernier commit
+
+git revert shaDuCommit
+
+git clone lienDuRepository : copier le repository avec ses différents commits
+
+git push original master : envoyer sur repositoty backup
+
+git pull origin master : récupérer les modifications apportés depuis github
+
+git branch : affiche les branches (* indique la courante)
+
+git checkout nomBranche : changer la branche courante (git checkout -b nomBranche pour créer branche puis s'y positionner)
+
+il y a conflit si on a des commits différents sur un même fichier
+Outils de résolution : git mergetool vimdiff
+
+git blame fichier.txt : analyser les modifications sur un fichier spécifique
+
+git show shaCommit : précisions sur les modifications apportées par fichier
+
+.gitignore : contient les fichiers ignorés par Git (1 fichier par ligne)
+
+git stash : mettre de côtés les modifications, retourner au dernier commit
+
+git stash pop : reprendre les modifications, git stash apply pour garder les modifs dans le tampon stash
+
+git config core.autocrlf true : enlever les avertissements de changement de \n en \r\n pour d'adapter à windows

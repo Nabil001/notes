@@ -1,0 +1,97 @@
+{{ pseudo }} : afficher une variable
+{{ user['id'] }} : afficher l'index d'un tableau
+{{ user.id }} : accéder à un attribut par  ->getAttribut
+{{ pseudo|upper }} : afficher une variable après application d'un filtre (ici, upper)
+{{ pseudo|striptags|title }} : on peut appliquer plusieurs filtres
+{{ date|date('d/m/Y') }} : filtre avec argument (ici, équivalent à date->format('d/m/Y'))
+{{ nom ~ " " ~ prenom }} : contaténer
+
+fonctionnement de objet.attribut :
+- si tableau, si oui aff index
+- si objet et attribut publique, aff attribut
+- si objet et méthode publique, aff méthode
+- si getAttribut, aff getAttribut
+- si isAttribut, aff isAttribut
+- sinon, aff null
+
+filtres utiles :
+upper, striptags, date('format'), format(param1, param2), length, raw (désactive la protection HTML)
+
+variable globale relative à Symfony3 : app
+{{app.request}} : affiche la request
+{{app.session}} : service session
+{{app.environment}} : env courant, dev prod
+{{app.debug}} : true si debug activé, false sinon
+{{app.user}} : utilisateur courant
+
+éxécuter des expressions :
+
+Structure if :
+    {% if user.age < 12 %}
+        user is underaged
+    {% elseif member.age > 18 %}
+        member is overaged
+    {% else %}
+        nothing
+    {% endif %}
+
+Structure for/foreach :
+si liste_membre sans valeurs, Twig ira dans la condition else
+{% for membre in liste_membre %}
+    <li>{{ membre.pseudo }}</li>
+{% else %}
+    Pas de membre trouvé
+{% endfor %}
+
+avec l'association clé-valeur :
+{% for valeur, option in liste_options %}
+    <option value="{{ valeur }}">{{ option }}</option>
+{% endfor %}
+
+Définir une variable : {% set foo = 'bar' %}
+
+la boucle for définit une variable loop en son sein, avec plusieurs attribut
+
+{{ loop.index }} : index courant (commence par 1)
+{{ loop.index0 }} : index courant (commence par 0)
+{{ loop.revindex }} : itérations restantes (finit par 1)
+{{ loop.revindex0 }} : itérations restantes (finit par 0)
+{{ loop.first }} : true si 1ère itération
+{{ loop.last }} : true si dernière itération
+{{ loop.length }} : le nombre d'itérations dans la boucle
+
+Quelques tests utiles :
+{% if var is defined %} variable définie {% endif %}
+{% if var is even %} variable paire {% endif %}
+{% if var is odd %} variable impaire {% endif %}
+
+Héritage de templates :
+un template père définit des blocs qui seront remplis par des templates fils
+avantage par rapport à include -> un template fils peut remplir plusieurs bloc du père : il définit successivement les blocs qu'il remplit
+
+Définir un bloc :
+* template parent *
+{% block nom_bloc %} TEXTE BLOC {% endblock %}
+
+pour hériter :
+* template enfant *
+{% extends "template_parent" %}
+{% block nom_block %} {{ parent() }} - FILS {% endblock %}
+
+
+Ajouter une variable globale à Twig :
+// app/config/config.yml
+twig:
+    globals:
+        variable: "%quelquechose%"
+// app/config/parameters.yml
+parameters:
+    quelquechose: valeur
+
+Les templates doivent être organisés de cette manière :
+layout général à l'appli dans app/Resources/view (référence par ::layout.html.twig)
+layout général au bundle dans src/Bundle/Resources/views (référence par Bundle::layout.html.twig)
+layout de la page dans src/Resources/views/Controller (référence par Bundle:Controller/layout.html.twig)
+
+Inclure un controller : utile si l'on veut éxécuter une action d'un autre contrôleur, par exemple obtenir une liste des dernières annonces
+{{ render(controller('Bundle:Controller:action')) }}

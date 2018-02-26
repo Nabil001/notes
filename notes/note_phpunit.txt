@@ -1,0 +1,81 @@
+composer require phpunit/phpunit
+
+un exécubtable est installé : "vendor/bin/phpunit.bat"
+Rapport de couverture : "vendor/bin/phpunit.bat" --coverage-html web/tests
+
+assertSame($expected, $actual) : contrôler une égalité
+expectException($nomException) : indiquer l'attente d'une exception
+
+--filter=nomMethode : n'appeler que la méthode indiquée
+
+On peut contrôler une méthode avec un jeu de données grâce aux data providers :
+
+/**
+ * @dataProvider pricesForFoodProduct
+ */
+public function testcomputeTVAFoodProduct($price, $expectedTva)
+{
+    $product = new Product('Un produit', Product::FOOD_PRODUCT, $price);
+
+    $this->assertSame($expectedTva, $product->computeTVA());
+}
+
+public function pricesForFoodProduct()
+{
+    return [
+        [0, 0.0],
+        [20, 1.1],
+        [100, 5.5]
+    ];
+}
+
+
+$this->getMock('Acme\Foo') : obtenir une doublure de la classe Acme\Foo
+$mock->method('get')->willReturn($request) : définir le comportement d'une méthode
+$mock->expects($this->once())->method('get')->willReturn($request) : assertion pour s'assurer que la méthode 'get' sera appelé une fois
+
+$client = $this->getMockBuilder('GuzzleHttp\Client')
+           ->disableOriginalConstructor()
+           ->setMethods(['get'])
+           ->getMock(); // création d'une doublure implémentant la méthode get
+$client
+   ->method('get')
+   ->willReturn($response); // définition du comportement de la méthode get
+// …
+
+$githubUserProvider = new GithubUserProvider($client); // instanciation avec la doublure
+$githubUserProvider->loadUserByUsername('xxxxx'); // appelle de la méthode utilisant la doublure
+
+Avant de tester une méthode :
+déterminer ce qu'il faut tester (nombre de retours, et d'exceptions = nombre de cas à tester)
+
+Factorisation du code :
+on peut minimiser le code écrit en créant un attribut sur la classe de test pour chaque doublure créee
+c'est à la setUp() de les initialiser et à la tearDown() de les rendre nulles en fin de test
+
+Les tests doivent s'exécuter le plus rapidement possible afin que votre outil d'intégration continue ne prenne pas trop de temps lors d'un build, sans quoi l'équipe risque d'ignorer son résultat.
+
+Les tests doivent être isolés les uns des autres, car si un test dépend d'un autre test, cela rend leur maintien plus difficile et il devient impossible de ne lancer qu'un seul test à la fois.
+
+Les tests doivent être répétables à l'infini et toujours renvoyer le même résultat… c'est-à-dire ok.
+
+Les tests doivent se suffire à eux-mêmes pour être compréhensibles, cela permet de documenter le code.
+
+Les tests doivent permettre l'anticipation en couvrant le maximum de cas possibles.
+
+Pour tester fonctionnelement une application symfony, il faut que la classe test étende Symfony\Bundle\FrameworkBundle\Test\WebTestCase
+
+$client = static::createClient(); // créer un client virtuel
+$client->request('GET', '/'); // lancer une requete GET sur l'URI /
+
+$this->assertSame(200, $client->getResponse()->getStatusCode()); // vérifier la réponse
+
+On peut filtrer et intéragir avec la page renvoyé par request()
+$crawler->filter('html:contains("Bienvenue sur FoodDiary")')->count()
+$client->followRedirect() // suivre une redirection après soumission de formulaire
+$client->followRedirects() // à faire juste après la création du client pour que les redirections soient systématiquement suivies
+
+Utiliser le profiler :
+$client->enableProfiler();
+$crawler = $client->request('GET', '/profiler');
+$profile = $client->getProfile();

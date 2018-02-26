@@ -1,0 +1,89 @@
+Inclure des pages : include("xxx.php");
+strlen($chaine)
+str_replace($chaine_remplacé, $chaine_remplaçant, $chaine)
+str_shuffle($chaine_à_mélanger)
+string substr ( string $string , int $start [, int $length ] )
+strtolower($chaine)
+strtoupper($chaine)
+date('Y') ou 'H', 'i', 'm', 'd'
+unset($foo)
+array_values($array) : copie le tableau et le ré-indexe de façon numérique
+define('FOO', 'xxx') : définir une constante FOO valant 'xxx'
+array_key_exists(clé, array)
+in_array(valeur, array)
+array_search(valeur, array) : retourne la clé
+strip_tags($str) : retirer les balises encadrant la chaine
+htmlspecialchars($str) : transforme les chevrons et caractères HTML
+                        en caractère non-interpretables par le navigateurs
+
+enctype="multipart/form-data" à la balise <form> pour intégrer l'envoi de fichier
+
+utilisation de fopen('CHEMIN', 'r/r+/a/a+') :
+    - r : Ouvre le ﬁchier en lecture seule. Cela signiﬁe que vous pourrez seulement lire le ﬁchier.
+    - r+ : Ouvre le ﬁchier en lecture et écriture. Vous pourrez non seulement lire le ﬁchier, mais aussi y écrire (on l’utilisera assez souvent en pratique).
+    - a : Ouvre le ﬁchier en écriture seule. Mais il y a un avantage : si le ﬁchier n’existe pas, il est automatiquement créé
+    - a+ : Ouvre le ﬁchier en lecture et écriture. Si le ﬁchier & n’existe pas, il est créé automatiquement. Attention : le répertoire doit avoir un CHMOD à 777 dans ce cas! À noter que si le ﬁchier existe déjà, le texte sera rajouté à la ﬁn.
+
+$file = fopen('counter.txt', 'r+');
+$counter = fgets($file);
+$counter++;
+fseek($file, 0);
+fputs($file, $counter);
+fclose($file);
+
+try {
+    $bdd = new PDO('mysql:host=localhost;dbname=cours', 'nabil', '');
+} catch (Exception $e) {
+    die('Erreur : ' . $e->getMessage());
+}
+
+$response = $bdd->prepare('SELECT * FROM jeux_video');
+$response->execute();
+while($donnees = $response->fetch()) {
+    ?>
+    <p>
+        <?php echo $donnees['nom'] . ' ('. $donnees['console'] . ')'; ?>
+        appartient à <?php echo $donnees['possesseur']; ?>.
+    </p>
+    <?php
+}
+$response->closeCursor();
+
+errorInfo au niveau de l'objet PDO :
+$reponse1 = $bdd->query('SELECT champinconnu FROM jeux_video') or die(print_r($bdd->errorInfo()))
+
+errorInfo au niveau de l'objet PDOStatement :
+$reponse2 = $bdd->prepare('SELECT champinconnu FROM jeux_video')
+$response2->execute() or die(print_r($response2->errorInfo()))
+
+Insertion avec objet PDO : $bdd->exec(DECLARATION);
+Avec requête préparée : prepare() et execute()... comme pour la sélection
+
+2 types de fonctions SQL :
+scalaires (agir sur chacune des entrées) -> ROUND, LENGTH, LOWER, UPPER...
+aggrégat (une valeur à partir de plusieurs entrées) -> COUNT, MAX, MIN, AVG, SUM...
+SELECT SUM(prix) as sum, possesseur FROM jeux_video GROUP BY possesseur HAVING sum <= 110;
+WHERE agit sur la sélection initiale de la table, HAVING agit après le groupement
+
+fonctions relatives aux dates : NOW(), CURDATE(), CURTIME()
+DATE_FORMAT(date, '%d/%m/%Y %Hh%imin%ss'), DATE_ADD/SUB(date, INTERVAL 15 DAY/MONTH/YEAR/HOUR/MINUTE/SECOND);
+
+.htacces et .htpasswd pour que le serveur rende l'accès à un dossier sécurisé
+
+Envoyer une image au navigateur :
+header('Content-type: image/jpeg');
+$image = imagecreatefromjpeg('ExpressFoodDiagramme.jpg');
+imagejpeg($image);
+
+regex :
+a? pour 0 ou 1 a ---> a{0,1}
+a+ pour au moins 1 a ---> a{1,}
+a* pour nombre de a quelconque (0 inclut) ---> a{0,}
+\w : caractère alphanumérique
+\W : contraire
+\d : digit
+\D : contraire
+
+preg_match(regex, expression) : tester la validité
+numéro de téléphone : #^0[1-68]([-. ][0-9]{2}){4}#
+email : #^[._-a-z0-9]+@[._-a-z0-9]{2,}\.[a-z]{2,4}$#

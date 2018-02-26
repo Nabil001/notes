@@ -1,0 +1,225 @@
+Chargement automatique de classe :
+<?php
+function chargerClasse($classe)
+{
+  require $classe . '.php'; // On inclut la classe correspondante au paramètre passé.
+}
+
+spl_autoload_register('chargerClasse'); // On enregistre la fonction en autoload pour qu'elle soit appelée dès qu'on instanciera une classe non déclarée.
+
+new Personnage();
+
+hydrater un objet : assigner des valeurs aux attributs de l'objet, grâce aux données de la BDD
+
+PDO::FETCH_ASSOC: Retourne la ligne suivante en tant qu'un tableau indexé par le nom des colonnes
+Array
+(
+    [nom] => apple
+    [couleur] => red
+)
+
+Methode d'hydratation : parcourt des données, vérification de l'existance du setter, invocation
+
+public function hydrate(array $donnees)
+{
+  foreach ($donnees as $key => $value)
+  {
+    // On récupère le nom du setter correspondant à l'attribut.
+    $method = 'set'.ucfirst($key);
+
+    // Si le setter correspondant existe.
+    if (method_exists($this, $method))
+    {
+      // On appelle le setter.
+      $this->$method($value);
+    }
+  }
+}
+
+bonjour_le_monde ==> bonjourLeMonde :
+$cle = preg_replace_callback('#_([a-z])#', function($str) {return strtoupper($str[1]);}, $cle);
+$cle = 'set' . ucfirst($cle);
+
+appelle de la methode de classe parente : parent::foo() (équivalent à super.foo() en Java)
+
+self:: appelle de la classe dans laquelle la méthode invoquée se situe
+static:: appelle de la classe précisée lors de l'appelle de méthode statique
+
+méthodes magiques :
+__set() : tentative de modification d'un attribut hors de portée ou inexistant
+__get() : tentative de lecture d'un attribut hors de portée ou inexistant
+__isset() : tentative d'appelle de isset() sur un attribut hors de portée ou inexistant
+__unset() : tentative d'appelle de unset() sur un attribut hors de portée ou inexistant
+__call() : tentative d'appelle d'une méthode hors de portée ou inexistante
+__sleep() : comportement à la sérialisation, renvoi d'un tableau comportant le attributs à sauvegarder
+__wakeup() : comportement à la désérialisation (par exemple, création d'un PDO pour un objet Connexion)
+__toString() : comportement de l'objet lors d'une conversion en chaîne de caractère (avec echo)
+__invoke() : comportement lors de l'utilisation d'un objet comme fonction
+
+
+égualité d'objets :
+== tester si attributs égaux et si classe identique
+=== tester si même instance
+$foo = clone $obj pour copier $obj (__clone() pour comportement de copie)
+
+interface :
+- comme en Java
+- elles peuvent avoir des héritages multiples vers d'autres interfaces
+- interface constante : une interface qui contient une constante (const CONSTANTE = "foo")
+Interfaces pré-définies :
+- Iterator (current, key, next, rewind, valid)
+- SeekableIterator (extends Iterator, seek)
+- ArrayAccess :
+    - offsetExits : méthode appelée lorsqu’on appelle la fonction isset() ou empty() sur l’objet
+    - offsetUnset : méthode appelée lorsqu’on appelle la fonction unset() sur l’objet avec une valeur entre crochets. Cette méthode reçoit un argument, la valeur qui est mise entre les crochet
+    - offsetSet : méthode appelée lorsqu’on assigne une valeur à une entrée. Cette méthode reçoit donc deux arguments, la valeur de la clé et la valeur qu’on veut lui assigner
+    - offsetGet : méthode appelée lorsqu’on fait un simple $obj[’clé’]. La valeur ’clé’ est donc passée à la méthode offsetGet
+- Countable : count() indiquant le nombre d'éléments de l'objet
+
+Classe implémentants les 5 dernières interfaces pré-définies : ArrayIterator (constructeur ayant 1 paramètre : le tableau de départ)
+
+Exception : voir exception.php, WrongAdditionException.class.php
+InvalidArgumentException : exception pour arguments invalides
+set_error_handler('fonctionAAppelerSiErreur');
+set_exception_handler('fonctionAAppelerSiException');
+
+use A, B {
+    B::smallTalk insteadof A;
+    A::bigTalk insteadof B;
+    B::bigTalk as protected/private/public talk;
+}
+
+new ReflectionClass('classe');
+new ReflectionObject($obj);
+hasMethod(), hasProperty(), hasConstant(), getParentClass(), getName(), isSubClassOf('classe'), isAbstract(), isFinale(), isInstanciable(), isInterface(), implementsInterface('interface'), getInterfaces(), getInterfaceNames();
+$classeGuerrier->getParentClass()->getName();
+$reflectionClassIntance->getProperty('nameOfAttribute'); ou new ReflectionProperty('classe', 'attribut');
+tableau de ReflectionProperty : $reflectionClassIntance->getProperties();
+
+méthode de ReflectionProperty : getName(), getValue() (attribut static), getValue($obj) (fonctionne directement seulement si public)
+$instanceOfReflectionProperty->setAccessible(true) pour rendre un attribut public
+isPrivate(), isProtected(), isPublic(), isStatic();
+
+Informations sur les méthodes : new ReflectionMethod('classe', 'nomMethode') ou $reflectionClassInstance->getMethod('nomMethod');
+$reflectionMethodInstance->invoke($obj, $arg1, $arg2...)
+$reflectionMethodInstance->invokeAll($obj, $argsArray);
+
+$annotatedClass = new ReflectionAnnotatedClass('nomClasse');
+//instance représentant la classe et ses annotations
+$annotation = $annotatedClass->getAnnotation('nomAnnotation');
+$annotation->value;
+
+->getAnnotations('nomAnnotation') retourne un tableau (utile si plusieurs annotations de même classe)
+
+/**
+ * @Table(childAttr = "CHILD_ATTR_TEST") <----- initialiser un argument de la classe Table (à vérifier avec checkConstraints(), à implémenter dans Table);
+ */
+
+Annotation @Target('class'/'property'/'method'/'nesty') pour spécialiser une annotation
+/** @Target("class") */ au dessus de la définition de l'annotation (classe héritant d'Annotation)
+
+dia.exe -integrated (joindre les deux interfaces de l'application)
+
+$db = new PDO('mysql:host=localhost;dbname=tests', 'root', '');
+$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
+
+Pattern Factory : classe chargé de créer des instances (créer des PDO de différentes natures...)
+Pattern Observer : une classe observée prévient ses classes observeuses à l'appelle d'une de ses méthodes
+
+function error($errno, $errstr, $errfile, $errline);
+
+Pattern Strategy : le comportement de la classe varie selon l'attribut (implémentant une interface particulière)
+Pattern Singleton : une unique instance de classe
+Injection de dépendances : rendre la classe A moins dépendante à B en ayant B implémentant une interface, et en ayant un attribut dans A référençant une telle interface
+
+composer install pour installer les dépendances
+composer update pour mettre à jour (en accord avec composer.json)
+require __DIR__ . '/vendor/autoload.php';
+
+ajouter un chemin pour l'autoload :
+{
+    "autoload": {
+        "psr-4": {"Acme\\": "src/"}
+    }
+}
+
+Espaces de noms :
+namespace espaceDeNom;
+//définition des classes, fonctions... incluses dans l'espace espaceDeNom
+espaceDeNom\functionFoo() : appeler la fonction functionFoo() située dans espaceDeNom
+namespace\functionFoo() : de même (namespace permet à l'espace de s'appeler lui-même, comme self pour les classes)
+
+Pour accéder à des classes internes ou à des classes qui ne sont pas dans un espace de noms, il faut les représenter avec leur nom absolu
+Pour les fonctions et constantes, PHP va aller les chercher dans l'espace global s'il ne peut les trouver dans l'espace de noms courant.
+
+
+Twig : accéder à un attribut ou élément de tableau
+{{ foo.bar }} ou {{ attribute(foo, 'bar') }}
+{% for item in array %}
+{% endfor %}
+
+charger un template :
+$loader = new Twig_Loader_Filesystem('/path/to/templates');
+$twig = new Twig_Environment($loader, array(
+    'cache' => '/path/to/compilation_cache',
+));
+$template = $twig->load('index.html');
+echo $template->render(array('the' => 'variables', 'go' => 'here'));
+OU
+echo $twig->render('index.html', array('the' => 'variables', 'go' => 'here'));
+
+rendre un bloc, si défini dans le template :
+echo $template->renderBlock('block_name', array('the' => 'variables', 'go' => 'here'));
+
+hydratation assurée par PDOStatement
+$persosQuery->setFetchMode(PDO::FETCH_CLASS | PDO::FETCH_PROPS_LATE, 'Personnage');
+$persos = $persosQuery->fetchAll();
+
+Generator :
+function generator() {
+    for($i = 0 ; $i < 10 ; $i++) {
+        yield $i;
+    }
+}
+
+fonction à itération contrôlé :
+function generator() {
+    for($i = 0 ; $i < 10 ; $i++) {
+        yield;
+        echo 'something';
+    }
+}
+$gen = generator();
+$gen->send(1);
+$gen->send(1);
+$gen->send(1);
+$gen->send(1);
+
+Closure :
+function createAdditionner($toAdd) {
+    return (
+        function($val) use ($toAdd) {
+            return intval($val + $toAdd);
+        }
+    );
+}
+$array = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+print_r(array_map(createAdditionner(10), $array));
+
+Lier une closure à un objet
+$setter = function() {
+    $this->nbr = 5;
+};
+On peut lier cette closure à un objet :
+$setter = $setter->bindTo($obj, $contexte : 'Classe d'où on appelle la closure);
+$setter()
+OU, pour aller plus vite, et si $contexte = class($obj) :
+$setter->call($obj);
+
+Closure statique :
+$setter = static function() {
+    self::nbr = 5;
+};
+$setter = $setter->bindTo(null, $contexte : 'Classe à affecter par la closure');
+
+si closure déclarée comme méthode, elle est déjà lié à la classe (et l'instance si non statique)

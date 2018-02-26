@@ -1,0 +1,57 @@
+Requête HTTP avec curl :
+curl 127.0.0.1\
+-H "Accept: application/json"\
+-X POST\
+-u myuser:pass\
+--data '{"message":"hello"}'
+
+On peut ajouter un groupe à chaque élément :
+@Serializer\Groups({"group"})
+
+... de sorte à modifier la sérialisation selon le groupe :
+$data = $this->get('jms_serializer')->serialize(
+    $article,
+    'json',
+    SerializationContext::create()->setGroups(array('show'))
+);
+
+évenements lancé par le dispatcher JMS Serializer :
+serializer.pre_serialize -> JMS\Serializer\EventDispatcher\PreSerializeEvent
+serializer.post_serialize -> JMS\Serializer\EventDispatcher\ObjectEvent
+serializer.pre_deserialize -> JMS\Serializer\EventDispatcher\PreDeserializeEvent
+serializer.post_deserialize -> JMS\Serializer\EventDispatcher\ObjectEvent
+
+bin/console config:dump-reference fos_rest : afficher la configuration FOSRestBundle
+
+Configuration contrôleur avec FOSRestBundle:
+@Prefix("/api")
+@Head("/articles")
+@Get("/articles/{id}")
+@Post("/articles")
+@Put("/articles/{id}")
+@Patch("/articles/{id}")
+@Delete("/articles/{id}")
+@Link("/articles/{id}/authors")
+@Unlink("/articles/{id}/authors")
+@Options("/authors")
+
+Ajouter un lien à la sérialisation :
+ * @Hateoas\Relation(
+ *      "modify",
+ *      href = @Hateoas\Route(
+ *          "app_article_update",
+ *          parameters = { "id" = "expr(object.getId())" },
+ *          absolute = true
+ *      )
+ * )
+ Ajouter une ressource embarquée à la sérialisation :
+ * @Hateoas\Relation(
+ *     "author",
+ *     embedded = @Hateoas\Embedded("expr(object.getAuthor())")
+ * )
+
+Faire appel à un service pour ajouter des informations à la sérialisation :
+-> dans le constructeur Embedded : "expr(service('app.weather').getCurrent())"
+
+On peut facilement obtenir une représentation d'une liste paginée avec :
+Hateoas\Representation\PaginatedRepresentation (voir constructeur)

@@ -1,0 +1,268 @@
+Opérations qu'on peut appliquer à une relation A :
+    - sélection : obtenir les lignes de A répondant à certains critères
+    - projection : obtenir une partie des attributs de A
+    - union : obtenir ce qui se trouve dans A ou dans B
+    - intersection : obtenir ce qui se trouve dans A et dans B
+    - différence : obtenir ce qui se trouve dans la relation A mais pas dans la relation B
+    - jointure : obtenir l’ensemble des lignes provenant de la liaison de la relation A et de la relation B à l’aide d’une information commune
+
+sauvegarder : mysqldump -u nabil -p --opt elevage > elevage_sauvegarde.sql
+se connecter : mysql -u nabil -pn3a4w9m6 --default-character-set=utf8
+Toujours préciser l'encodage, soit avec l'option, soit avec SET NAMES 'utf8'
+
+INT(4) ZEROFILL : complète la taille d'affichage voulue avec des zéros (0001 0022 0333 4444 555555555)
+
+NUMERIC/DECIMAL([chiffres significatifs], [précision]) : jusqu'à 5 chiffres significatifs, dont 3 après la virgule (stockés sous forme de chaînes de caractères, donc pas de problème de comparaison possible)
+FLOAT : 4 octets, accepte les paramètres
+DOUBLE : 8 octets, sans paramètres
+
+stocker des chaînes de caractères sur 255 octets (120 caractère) au maximum :
+CHAR(x) jusqu'à x octets pour stocker le champs, qui occupera en mémoire toujours x octets
+VARCHAR(x) jusqu'à x octets pour stocker le champs, la taille en mémoire varie, et un octet est ajouté indiquant la taille du champs
+
+stocker en binaire brut : BINARY(x) et VARBINARY(x)
+DATETIME : 'AAAA-MM-JJ HH:MM:SS'
+TIME : peut servir à stocker des intervalles de temps, même négatifs
+TIMESTAMP : AAAAMMJJHHMMSS
+
+Préciser l'encodage pour créer une base de données : CREATE DATABASE elevage CHARACTER SET 'utf8';
+supprimer : DROP DATABASE [IF EXISTS] elevage
+SHOW WARNINGS; -- pour montrer les avertissements de la dernière réponse reçu
+
+InnoDB : moteur de tables gérant les clés étrangères, à préciser avec ENGINE=INNODB à la création de la table
+moteur par défaut : MyISAM
+
+Syntaxe de création d'une table :
+CREATE TABLE [IF NOT EXISTS] Nom_table (
+colonne1 description_colonne1,
+[colonne2 description_colonne2,
+colonne3 description_colonne3,
+...]
+[PRIMARY KEY (colonne_clé_primaire)]
+)
+[ENGINE=moteur];
+
+exemple de description : id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT
+                            espece VARCHAR(40) NOT NULL DEFAULT 'chien'
+SHOW TABLES;
+DESCRIBE Animal;
+DROP TABLE [IF EXISTS] Animal;
+ALTER TABLE Animal ADD nom_colonne description
+ALTER TABLE Animal DROP nom_colonne
+ALTER TABLE Animal CHANGE ancien_nom_colonne nouveau_nom_colonne nouvelle_description
+ALTER TABLE Animal MODIFY nom_colonne nouvelle_description
+
+INSERT INTO Animal (colonne1, colonne2, colonne3)
+VALUES (valeur1, valeur2, valeur3),
+        (valeur1, valeur2, valeur3);
+
+Lire les instructions d'un fichier : SOURCE fichier.sql
+
+Insérer des données d'un fichier dans une table :
+LOAD DATA [LOCAL si côté client] INFILE fichier.csv
+INTO TABLE Personne
+FIELDS TERMINATED BY ';'
+LINES TERMINATED BY '\n' (ou '\r\n')
+[IGNORE 1 LINES]
+(nom, prenom, date_de_naissance)
+
+sélection : SELECT * FROM Animal WHERE id = 5 ORDER BY date_naissance ASC/DESC
+supprimer les doublons : SELECT DISTINCT espece FROM Animal
+limiter le résultat de la recherche : en fin de sélection, ajouter LIMIT nombres de lignes OFFSET offset
+
+LIKE : % = une chaîne quelconque
+        _ = 0 ou 1 caractère
+sensibilité à la casse : WHERE xxx LIKE BINARY 'xxx' (chaîne recherchée en tant que suite binaire)
+BETWEEN sensible à la casse : BETWEEN BINARY 'a' AND BINARY 'd'
+
+sélectionner des lignes dont le champs appartient à un ensemble : WHERE espece IN ('tortue', 'chien', 'chat')
+
+DELETE FROM Animal : supprime toutes les lignes de la table Animal
+
+Mise à jour :
+UPDATE Animal SET commentaires=NULL : met tous les commentaires à NULL
+UPDATE Animal
+SET nom='new', age=3
+WHERE id=5
+
+Index : arbre stockant les éléments du champs en question de façon ordonnée
+    Avantages : accélère grandement les recherches (car dichotomiques)
+    Inconvénient : ralenti l'insertion, la modification et la suppression de ligne
+
+UNIQUE : permet d'assurer l'unicité dans la ou les colonnes défini par l'index (exemple : avoir un id unique en ayant un index UNIQUE sur la colonne id, avoir un couple (espece, nom) unique dans la table animal en ayant un index UNIQUE sur le couple de colonne (espece, nom))
+
+FULLTEXT : recherche rapide et puissant sur du text (CHAR, VARCHAR, TEXT), on ne peut pas y appliquer le principe d'index par la gauche : l'index (colonne1, colonne2) ne permet par de rechercher efficacement sur colonne1, il faut un autre index (colonne1)
+
+KEY pour ajout en fin de description :
+CREATE TABLE Test (
+colonne1 description1 KEY,
+colonne2 description2 UNIQUE
+)
+ENGINE=INNODB;
+    -> Pas possible d'avoir un index sur plusieurs colonne de cette manière
+
+INDEX pour ajout en fin de création :
+CREATE TABLE Test (
+colonne1 description1,
+colonne2 description2,
+colonne3 description3,
+PRIMARY KEY colonne1,
+INDEX nom_index (colonne2),
+UNIQUE nom_index (colonne1, colonne3),
+INDEX nom_index (colonne(3)),
+FULLTEXT nom_index(colonne4)
+)
+ENGINE=INNODB;
+
+Ajout index après création : ALTER TABLE Table ADD INDEX nom_index (colonne1[, colonne2...]);
+Supprimer : ALTER TABLE Table DROP INDEX nom_index;
+
+Comment se déroule une recherche FULLTEXT :
+- chaque mot de la recherche est comparé séparemment aux lignes
+- les mots rencontrés dans au moins la moitié des lignes sont ignorés (règle des 50%)
+- les mots trop courts (moins de quatre lettres) sont ignorés
+- les mots trop communs (en anglais, about, after, once, under, the...)
+    ne sont également pas pris en compte
+
+Il faut donc que la recherche et les lignes contiennent suffisamment de mots (3 lignes)
+
+Sélection naturelle : on cherche chaque mot 1 par 1
+SELECT * FROM Livre
+WHERE MATCH(titre, auteur)  -> besoin d'un index FULLTEXT (titre, auteur) pour faire ça
+AGAINST ('Jules Verne' IN NATURAL LANGUAGE MODE);
+    -> retourne les titres ou auteurs ayant Jules et/ou Verne dans leur valeur
+
+Recherche booleene : plus précise car on peut exiger la présence ou l'absence de mots, ainsi que des groupes de mots
+plus approximative car on peut utiliser * pour indiquer que le mot peut se terminer de plusieurs manières
+SELECT * FROM Livre MATCH(titre) AGAISNT ('+bohneur* -ogres' IN BOOLEAN MODE)
+    -> les mots de moins de 4 lettres sont ignorés
+
+Expansion de requête : WITH QUERY EXPANSION
+SELECT * FROM Livre WHERE MATCH (auteur, titre) AGAINST ('Daniel' WITH QUERY EXPANSION);
+    -> 1ère recherche naturelle avec Daniel, puis 2nd avec les résultats obtenus
+
+Clé primaire : combinaison de 2 contraintes (UNIQUE et NOT NULL), peut être composite
+Ajout par ALTER : ALTER TABLE Table ADD PRIMARY KEY (colonne1[, colonne2...]);
+supprimer : ALTER TABLE Table DROP PRIMARY KEY;
+
+Créer une clé étrangère à la création de la table :
+en fin de création :
+CONSTRAINT nom_clé_étrangère
+FOREIGN KEY colonne_référençante
+REFERENCES Table_étrangère(colonne_référencée)
+
+Avec ALTER :
+ALTER TABLE Table
+ADD CONSTRAINT nom_clé_étrangère
+FOREIGN KEY colonne_référençante
+REFERENCES Table_étrangère(colonne_référencée)
+
+Supprimer une clé étrangère : ALTER TABLE Table DROP FOREIGN KEY nom_contrainte
+
+Syntaxe jointure (interne):
+    SELECT Espece.description
+    FROM Espece
+    INNER JOIN Animal
+    ON Animal.espece_id = Espece.id
+    WHERE Animal.nom = 'Cartouche';
+
+Alias sur les tables :
+    SELECT e.description
+    FROM Espece AS e
+    INNER JOIN Animal AS a
+    ON a.espece_id = e.id
+    WHERE a.nom = 'Cartouche';
+
+Alias sur les colonnes :
+    SELECT Espece.id AS id_espece, Animal.id AS id_animal
+    FROM Espece
+    INNER JOIN Animal
+    ON Animal.espece_id = Espece.id
+    WHERE Animal.nom = 'Cartouche';
+
+LEFT JOIN : Lorsque l’on fait une jointure par la gauche (grâce aux mots-clés LEFT JOIN ou LEFT OUTER JOIN), cela signiﬁe que l’on veut toutes les lignes de la table de gauche (sauf restrictions dans une clause WHERE bien sûr), même si certaines n’ont pas de correspondance avec une ligne de la table de droite
+
+On veut tous les chats (espece_id = 2), même ceux qui n'ont pas de race (race_id = NULL) :
+    SELECT Animal.nom AS nom_animal, Race.nom AS race
+        -> FROM Animal
+        -> LEFT JOIN Race
+        -> ON Animal.race_id = Race.id
+        -> WHERE Animal.espece_id = 2
+        -> AND Animal.nom LIKE 'C%'
+        -> ORDER BY Race.nom, Animal.nom;
+
+RIGHT JOIN : Les jointures par la droite (RIGHT JOIN ou RIGHT OUTER JOIN), c’est évidemment le même principe, sauf que ce sont toutes les lignes de la table de droite qui sont sélectionnées même s’il n’y a pas de correspondance dans la table de gauche.
+
+USING : s'utilisent lorsque les colonnes qui permettent la jointure ont le même nom
+SELECT xxx
+FROM xxx
+JOIN xxx USING colonne_commune
+WHERE...
+
+COUNT(colonne) compte le nombre de lignes de cette colonne.
+
+
+Sous-requête :
+SELECT Projet.*
+FROM Projet
+WHERE responsable_id IN (
+    SELECT Utilisateur.id
+    FROM Utilisateur
+    WHERE Utilisateur.nom = 'Brandon'
+);
+
+SELECT *
+FROM Race
+WHERE EXISTS (SELECT * FROM Animal WHERE Animal.id = Race.id);
+-----> Sélectionne toutes les races auxquelles des animaux sont attribués
+
+Insertion par des sous-requêtes :
+INSERT INTO Animal (nom, sexe, date_naissance, race_id, espece_id)
+SELECT 'Yoda', 'M', '2010-11-09', id AS race_id, espece_id FROM Race WHERE nom = 'Maine coon';
+
+Modification par des sous-requêtes sur clause WHERE :
+UPDATE Animal SET commentaires = 'Coco veut un gâteau !' WHERE
+espece_id = (SELECT id FROM Espece WHERE nom_courant LIKE '%perroquet%');
+
+Modification par des sous-requêtes sur l'élément à modifier :
+UPDATE Animal SET race_id = (SELECT id FROM Race WHERE nom = 'Nebelung')
+WHERE nom = 'Cawette';
+
+Modification d'une table à partir d'une information d'une autre table par jointure :
+UPDATE Animal
+INNER JOIN Espece
+ON Espece.id = Animal.espece_id
+SET Animal.commentaires = Espece.description
+WHERE Animal.commentaires IS NULL AND Espece.nom_courant IN ('Perroquet amazone', 'Tortue d''Hermann');
+
+Suppression avec jointure:
+DELETE Animal FROM Animal INNER JOIN Espece ON Animal.espece_id = Espece.id
+WHERE Animal.nom = 'Carabistouille' AND Espece.nom_courant = 'chat';
+
+Réunir deux requêtes : UNION (supprime les doublons) ou UNION ALL (avec les doublons)
+(SELECT nom FROM Race ORDER BY nom DESC LIMIT 6)
+UNION
+(SELECT nom_courant FROM Espece LIMIT 2);
+
+Option de clé étrangère : ON DELETE/ON UPDATE RESTRICT/SET NULL/NO ACTION/CASCADE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright (c) 2017 Copyright Holder All Rights Reserved.
