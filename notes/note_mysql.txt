@@ -7,7 +7,7 @@ Opérations qu'on peut appliquer à une relation A :
     - jointure : obtenir l’ensemble des lignes provenant de la liaison de la relation A et de la relation B à l’aide d’une information commune
 
 sauvegarder : mysqldump -u nabil -p --opt elevage > elevage_sauvegarde.sql
-se connecter : mysql -u nabil -pn3a4w9m6 --default-character-set=utf8
+se connecter : mysql -u nabil -ppassword --default-character-set=utf8
 Toujours préciser l'encodage, soit avec l'option, soit avec SET NAMES 'utf8'
 
 INT(4) ZEROFILL : complète la taille d'affichage voulue avec des zéros (0001 0022 0333 4444 555555555)
