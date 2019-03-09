@@ -1,0 +1,13 @@
+Pr�paration Windows:
+WAMP
+Node.js
+Git
+Cywin
+Composer
+Atom (indentation, spell checking, LF)
+Postman
+f.lux
+Chrome
+D�sactiver programmes ralentissant au d�marrage
+D�sactiver Cortana
+barre : Bloc note, explorateur, WAMP, Postman, terminal, atom, chrome
